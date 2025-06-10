@@ -8,6 +8,10 @@ $(function() {
     $('#closeModal, #modalConfirm, #modalCancel').on('click', closeModal);
 });
 
+function escapeHtml(text) {
+    return $('<div>').text(text).html();
+}
+
 function calculateBMI() {
     let nama = $('#nama').val().trim();
     let usia = parseInt($('#usia').val());
@@ -50,16 +54,20 @@ function calculateBMI() {
         kategori = 'Obesitas'; textColor = 'text-red-500';
     }
 
-    $.post('api/save_bmi.php', {
-        nama: nama,
-        usia: usia,
-        jenis_kelamin: jenisKelamin,
-        berat: berat,
-        tinggi: tinggi,
-        bmi: bmiRounded,
-        kategori: kategori
-    }).done(function(response) {
-        let result = (typeof response === 'object') ? response : JSON.parse(response);
+    $.ajax({
+        url: 'api/save_bmi.php',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            nama: nama,
+            usia: usia,
+            jenis_kelamin: jenisKelamin,
+            berat: berat,
+            tinggi: tinggi,
+            bmi: bmiRounded,
+            kategori: kategori
+        }
+    }).done(function(result) {
         if (result.status === 'success') {
             showModal('Hasil BMI', `
                 <div class="text-center">
@@ -78,8 +86,10 @@ function calculateBMI() {
 }
 
 function loadBMIHistory() {
-    $.get('api/get_bmi_history.php', function(response) {
-        let result = (typeof response === 'object') ? response : JSON.parse(response);
+    $.ajax({
+        url: 'api/get_bmi_history.php',
+        dataType: 'json'
+    }).done(function(result) {
         if (result.status === 'success') {
             displayBMIHistory(result.data);
         } else {
@@ -104,11 +114,11 @@ function displayBMIHistory(data) {
         else if (item.kategori === 'Obesitas') textColor = 'text-red-500';
         tbody.append(`
             <tr>
-                <td class="px-6 py-4">${item.nama}</td>
-                <td class="px-6 py-4">${item.usia} / ${item.jenis_kelamin}</td>
+                <td class="px-6 py-4">${escapeHtml(item.nama)}</td>
+                <td class="px-6 py-4">${item.usia} / ${escapeHtml(item.jenis_kelamin)}</td>
                 <td class="px-6 py-4">${formatDate(item.tanggal)}</td>
                 <td class="px-6 py-4 font-bold">${item.bmi}</td>
-                <td class="px-6 py-4 font-bold ${textColor}">${item.kategori}</td>
+                <td class="px-6 py-4 font-bold ${textColor}">${escapeHtml(item.kategori)}</td>
                 <td class="px-6 py-4">
                     <button onclick="deleteRecord(${item.id})" class="text-red-500 hover:text-red-700">Hapus</button>
                 </td>
@@ -129,9 +139,12 @@ function formatDate(dateString) {
 
 function deleteRecord(id) {
     showConfirmModal('Konfirmasi', 'Hapus data ini?', function() {
-        $.post('api/delete_bmi.php', { id: id })
-        .done(function(response) {
-            let result = (typeof response === 'object') ? response : JSON.parse(response);
+        $.ajax({
+            url: 'api/delete_bmi.php',
+            type: 'POST',
+            dataType: 'json',
+            data: { id: id }
+        }).done(function(result) {
             if (result.status === 'success') {
                 showModal('Sukses', 'Data berhasil dihapus.');
                 loadBMIHistory();
